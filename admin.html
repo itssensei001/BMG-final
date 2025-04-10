@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Manage Properties</title>
+    <style>
+        body { font-family: sans-serif; margin: 0; padding: 20px; background-color: #f4f4f4; }
+        .container { max-width: 1000px; margin: 20px auto; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1, h2 { color: #333; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        button { background-color: #2b385e; color: white; padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem; margin: 5px; transition: background-color 0.3s ease; }
+        button:hover { background-color: #b58435; }
+        button.edit-btn { background-color: #ffc107; color: #333;}
+        button.edit-btn:hover { background-color: #e0a800; }
+        button.delete-btn { background-color: #dc3545; }
+        button.delete-btn:hover { background-color: #c82333; }
+        button.add-btn { background-color: #28a745; margin-bottom: 20px; }
+        button.add-btn:hover { background-color: #218838; }
+
+        /* Table Styles */
+        #properties-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+        #properties-table th, #properties-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        #properties-table th { background-color: #f8f9fa; font-weight: bold; }
+        #properties-table tr:nth-child(even) { background-color: #f2f2f2; }
+        #properties-table td:last-child { text-align: center; width: 150px; } /* Actions column */
+
+        /* Form Styles */
+        #add-edit-form-container { border: 1px solid #ddd; padding: 20px; border-radius: 5px; background-color: #fdfdfd; margin-top: 20px; display: none; /* Initially hidden */ }
+        .form-section { margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px dashed #eee;}
+        .form-section:last-child { border-bottom: none; }
+        .form-section h3 { margin-top: 0; margin-bottom: 15px; color: #555; font-size: 1.1rem; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; font-size: 0.9rem; }
+        label small { font-weight: normal; color: #777; font-size: 0.8rem; display: block; }
+        input[type="text"], input[type="number"], textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        textarea { min-height: 80px; resize: vertical; }
+
+        /* Dynamic Field Styles */
+        #features-container, #gallery-container { margin-top: 10px; }
+        .dynamic-item { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
+        .dynamic-item input[type="text"] { flex-grow: 1; }
+        .dynamic-item button.remove-btn { background-color: #6c757d; font-size: 0.8rem; padding: 5px 8px; margin: 0; }
+        .dynamic-item button.remove-btn:hover { background-color: #5a6268; }
+        .gallery-item input:last-child { min-width: 150px; flex-grow: 0; } /* Alt text input */
+
+        #status-message { margin-top: 15px; font-weight: bold; padding: 10px; border-radius: 4px; }
+        .status-success { color: #155724; background-color: #d4edda; border-color: #c3e6cb; }
+        .status-error { color: #721c24; background-color: #f8d7da; border-color: #f5c6cb; }
+        .status-info { color: #0c5460; background-color: #d1ecf1; border-color: #bee5eb; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Manage Properties</h1>
+
+        <!-- Section to View Properties -->
+        <section id="view-properties">
+            <h2>Current Listings</h2>
+            <button class="add-btn" id="show-add-form-btn">Add New Property</button>
+            <table id="properties-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Location</th>
+                        <th>Price</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="properties-tbody">
+                    <!-- Property rows will be loaded here by JS -->
+                    <tr><td colspan="5">Loading properties...</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Section to Add/Edit Properties (Initially Hidden) -->
+        <section id="add-edit-form-container">
+            <h2 id="form-title">Add New Property</h2>
+            <form id="add-edit-property-form">
+                <input type="hidden" id="property_id" name="property_id"> <!-- Hidden field for editing -->
+
+                <div class="form-section">
+                    <h3>Core Details</h3>
+                    <div class="form-group">
+                        <label for="name">Name <small>(Short name, e.g., "La Marina Cottage")</small></label>
+                        <input type="text" id="name" name="name" required>
+                    </div>
+                    <div class="form-group">
+                         <label for="title">Hero Title <small>(Displayed prominently on detail page, use &lt;br&gt; for line breaks)</small></label>
+                        <input type="text" id="title" name="title" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="location">Location <small>(e.g., "Mtwapa, La Marina")</small></label>
+                        <input type="text" id="location" name="location" required>
+                    </div>
+                     <div class="form-group">
+                        <label for="description">Description <small>(Optional details)</small></label>
+                        <textarea id="description" name="description"></textarea>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Pricing & Occupancy</h3>
+                     <div class="form-group">
+                        <label for="price_per_night">Price per Night</label>
+                        <input type="number" id="price_per_night" name="price_per_night" step="0.01" required>
+                    </div>
+                     <div class="form-group">
+                        <label for="currency">Currency</label>
+                        <input type="text" id="currency" name="currency" value="KES" required>
+                    </div>
+                     <div class="form-group">
+                        <label for="max_occupancy">Max Occupancy</label>
+                        <input type="number" id="max_occupancy" name="max_occupancy" value="2" required>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                     <h3>Images <small>(Paths relative to static folder, e.g., "images/my_image.jpg")</small></h3>
+                    <div class="form-group">
+                        <label for="image_url">Main Listing Image <small>(Used on the properties overview page)</small></label>
+                        <input type="text" id="image_url" name="image_url" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="hero_image">Hero Image <small>(Large image on detail page, uses listing image if blank)</small></label>
+                        <input type="text" id="hero_image" name="hero_image">
+                    </div>
+                     <div class="form-group">
+                        <label for="main_image">Detail Page Main Image <small>(Image below hero, uses listing image if blank)</small></label>
+                        <input type="text" id="main_image" name="main_image">
+                    </div>
+                </div>
+
+                 <div class="form-section">
+                    <h3>Features <small>(Displayed as a list on detail page)</small></h3>
+                    <div id="features-container">
+                        <!-- Feature inputs added dynamically -->
+                    </div>
+                    <button type="button" id="add-feature-btn">Add Feature</button>
+                </div>
+
+                <div class="form-section">
+                     <h3>Gallery Images <small>(Thumbnails on detail page)</small></h3>
+                    <div id="gallery-container">
+                       <!-- Gallery inputs added dynamically -->
+                    </div>
+                    <button type="button" id="add-gallery-btn">Add Gallery Image</button>
+                </div>
+
+                <hr>
+                <button type="submit" id="submit-btn">Add Property</button>
+                <button type="button" id="cancel-btn" style="background-color: #6c757d;">Cancel</button>
+                <p id="status-message"></p>
+            </form>
+        </section>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- DOM Elements ---
+            const propertiesTbody = document.getElementById('properties-tbody');
+            const showAddFormBtn = document.getElementById('show-add-form-btn');
+            const formContainer = document.getElementById('add-edit-form-container');
+            const form = document.getElementById('add-edit-property-form');
+            const formTitle = document.getElementById('form-title');
+            const propertyIdInput = document.getElementById('property_id');
+            const featuresContainer = document.getElementById('features-container');
+            const galleryContainer = document.getElementById('gallery-container');
+            const addFeatureBtn = document.getElementById('add-feature-btn');
+            const addGalleryBtn = document.getElementById('add-gallery-btn');
+            const submitBtn = document.getElementById('submit-btn');
+            const cancelBtn = document.getElementById('cancel-btn');
+            const statusMessage = document.getElementById('status-message');
+
+            let isEditMode = false;
+
+            // --- Functions ---
+
+            // Function to display status messages
+            const showStatus = (message, type = 'info') => {
+                statusMessage.textContent = message;
+                statusMessage.className = `status-${type}`; // Use class for styling
+            };
+
+            // Function to create a feature input row
+            const createFeatureInput = (value = '') => {
+                const div = document.createElement('div');
+                div.className = 'dynamic-item feature-item';
+                div.innerHTML = `
+                    <input type="text" name="features[]" placeholder="Feature description" value="${value}">
+                    <button type="button" class="remove-btn">Remove</button>
+                `;
+                div.querySelector('.remove-btn').addEventListener('click', () => div.remove());
+                return div;
+            };
+
+            // Function to create a gallery input row
+            const createGalleryInput = (url = '', alt = '') => {
+                const div = document.createElement('div');
+                div.className = 'dynamic-item gallery-item';
+                div.innerHTML = `
+                    <input type="text" name="gallery_url[]" placeholder="Image URL (e.g., images/gallery1.jpg)" value="${url}">
+                    <input type="text" name="gallery_alt[]" placeholder="Alt Text" value="${alt}">
+                    <button type="button" class="remove-btn">Remove</button>
+                `;
+                 div.querySelector('.remove-btn').addEventListener('click', () => div.remove());
+                return div;
+            };
+
+            // Function to reset and hide the form
+            const resetForm = () => {
+                form.reset();
+                propertyIdInput.value = ''; // Clear hidden ID
+                featuresContainer.innerHTML = ''; // Clear dynamic fields
+                galleryContainer.innerHTML = '';
+                addFeatureInput(); // Add one empty row back
+                addGalleryInput();
+                isEditMode = false;
+                formTitle.textContent = 'Add New Property';
+                submitBtn.textContent = 'Add Property';
+                formContainer.style.display = 'none';
+                statusMessage.textContent = '';
+                statusMessage.className = '';
+            };
+            
+             // Add initial empty fields
+            const addFeatureInput = () => featuresContainer.appendChild(createFeatureInput());
+            const addGalleryInput = () => galleryContainer.appendChild(createGalleryInput());
+
+
+            // Function to fetch and display properties
+            const fetchProperties = async () => {
+                propertiesTbody.innerHTML = '<tr><td colspan="5">Loading properties...</td></tr>';
+                try {
+                    const response = await fetch('/api/admin/properties'); // Use new endpoint
+                    if (!response.ok) throw new Error('Failed to fetch properties');
+                    const properties = await response.json();
+
+                    propertiesTbody.innerHTML = ''; // Clear loading message
+                    if (properties.length === 0) {
+                        propertiesTbody.innerHTML = '<tr><td colspan="5">No properties found.</td></tr>';
+                        return;
+                    }
+
+                    properties.forEach(prop => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${prop.id}</td>
+                            <td>${prop.name}</td>
+                            <td>${prop.location}</td>
+                            <td>${prop.currency || 'KES'} ${prop.price_per_night || 'N/A'}</td>
+                            <td>
+                                <button class="edit-btn" data-id="${prop.id}">Edit</button>
+                                <button class="delete-btn" data-id="${prop.id}">Delete</button>
+                            </td>
+                        `;
+                        // Add event listeners for edit/delete
+                         tr.querySelector('.edit-btn').addEventListener('click', () => loadPropertyForEdit(prop.id));
+                         tr.querySelector('.delete-btn').addEventListener('click', () => deleteProperty(prop.id, prop.name));
+
+                        propertiesTbody.appendChild(tr);
+                    });
+                } catch (error) {
+                    console.error('Error fetching properties:', error);
+                    propertiesTbody.innerHTML = '<tr><td colspan="5" style="color:red;">Error loading properties.</td></tr>';
+                }
+            };
+
+            // Function to load property data into the form for editing (REFINED)
+             const loadPropertyForEdit = async (id) => {
+                console.log(`Loading property ${id} for edit...`);
+                form.reset(); // Reset native form elements first
+                propertyIdInput.value = ''; 
+                featuresContainer.innerHTML = ''; 
+                galleryContainer.innerHTML = ''; 
+                
+                isEditMode = true;
+                formTitle.textContent = `Edit Property (ID: ${id})`;
+                submitBtn.textContent = 'Update Property';
+                showStatus('Loading data...', 'info'); // Use showStatus function
+                formContainer.style.display = 'block'; 
+
+                try {
+                    const response = await fetch(`/api/property/${id}`); 
+                     if (!response.ok) throw new Error(`Failed to fetch property details for ID ${id} (Status: ${response.status})`);
+                    const property = await response.json();
+
+                    // --- Populate Form Fields Explicitly ---
+                    propertyIdInput.value = property.id; // Set hidden ID
+                    
+                    // Use optional chaining (?.) and nullish coalescing (??) for safety
+                    form.elements['name'].value = property.name ?? ''; 
+                    form.elements['title'].value = property.title ?? '';
+                    form.elements['location'].value = property.location ?? '';
+                    form.elements['description'].value = property.description ?? '';
+                    form.elements['image_url'].value = property.image_url ?? ''; // This should now populate
+                    form.elements['hero_image'].value = property.hero_image ?? '';
+                    form.elements['main_image'].value = property.main_image ?? '';
+                    form.elements['price_per_night'].value = property.price_per_night ?? 0;
+                    form.elements['currency'].value = property.currency ?? 'KES';
+                    form.elements['max_occupancy'].value = property.max_occupancy ?? 2;
+                    // Note: We don't populate 'page_url' as it's auto-generated/disabled
+
+
+                    // --- Populate Features ---
+                    featuresContainer.innerHTML = ''; // Clear first
+                    if (property.features && property.features.length > 0) {
+                        property.features.forEach(feature => {
+                            featuresContainer.appendChild(createFeatureInput(feature)); 
+                        });
+                    } else {
+                         featuresContainer.appendChild(createFeatureInput()); // Add one empty if none
+                    }
+
+                    // --- Populate Gallery Images ---
+                     galleryContainer.innerHTML = ''; // Clear first
+                     if (property.gallery_images && property.gallery_images.length > 0) {
+                        property.gallery_images.forEach(img => {
+                            galleryContainer.appendChild(createGalleryInput(img.url ?? '', img.alt ?? '')); // Use ??
+                        });
+                    } else {
+                         galleryContainer.appendChild(createGalleryInput()); // Add one empty if none
+                    }
+
+                    showStatus('Property data loaded for editing.', 'success');
+
+                } catch (error) {
+                    console.error('Error loading property for edit:', error);
+                    showStatus(`Error loading property data: ${error.message}`, 'error');
+                    formContainer.style.display = 'none'; // Hide form on error
+                }
+            };
+
+
+            // Function to handle property deletion
+             const deleteProperty = async (id, name) => {
+                if (!confirm(`Are you sure you want to delete property "${name}" (ID: ${id})? This cannot be undone.`)) {
+                    return;
+                }
+                console.log(`Attempting to delete property ${id}...`);
+                try {
+                    const response = await fetch(`/api/admin/properties/${id}`, { method: 'DELETE' });
+                    
+                    if (response.ok) {
+                         console.log(`Property ${id} deleted successfully.`);
+                        alert(`Property "${name}" deleted successfully!`);
+                         fetchProperties(); // Refresh the list
+                    } else {
+                         const result = await response.json();
+                        throw new Error(result.error || `Failed to delete property (Status: ${response.status})`);
+                    }
+                } catch (error) {
+                     console.error('Error deleting property:', error);
+                    alert(`Error deleting property: ${error.message}`);
+                }
+            };
+
+
+            // --- Event Listeners ---
+
+            // Show Add Form button
+            showAddFormBtn.addEventListener('click', () => {
+                resetForm(); // Ensure form is clean for adding
+                formContainer.style.display = 'block';
+                 // Add initial empty fields when showing form for adding
+                addFeatureInput(); 
+                addGalleryInput(); 
+            });
+
+            // Cancel button
+            cancelBtn.addEventListener('click', resetForm);
+
+            // Add Feature/Gallery buttons
+            addFeatureBtn.addEventListener('click', addFeatureInput);
+            addGalleryBtn.addEventListener('click', addGalleryInput);
+
+
+            // Form Submission (Add or Edit)
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                submitBtn.disabled = true; // Prevent double-clicks
+                showStatus('Submitting...', 'info');
+
+
+                const currentPropertyId = propertyIdInput.value;
+                const method = isEditMode ? 'PUT' : 'POST';
+                const url = isEditMode ? `/api/admin/properties/${currentPropertyId}` : '/api/admin/properties';
+
+
+                const formData = new FormData(form);
+                const data = { details: {}, features: [], gallery: [] };
+
+                // Collect details
+                 for (const [key, value] of formData.entries()) {
+                    if (!key.includes('[]') && key !== 'property_id') { // Exclude dynamic arrays and hidden ID
+                         data.details[key] = value;
+                    }
+                }
+                 // Collect features
+                document.querySelectorAll('input[name="features[]"]').forEach(input => {
+                    if (input.value.trim()) data.features.push(input.value.trim());
+                });
+                 // Collect gallery images
+                 const galleryUrls = document.querySelectorAll('input[name="gallery_url[]"]');
+                 const galleryAlts = document.querySelectorAll('input[name="gallery_alt[]"]');
+                 galleryUrls.forEach((urlInput, index) => {
+                     if (urlInput.value.trim()) {
+                         data.gallery.push({ url: urlInput.value.trim(), alt: galleryAlts[index].value.trim() });
+                     }
+                 });
+                 // Default image handling
+                 data.details.hero_image = data.details.hero_image || data.details.image_url;
+                 data.details.main_image = data.details.main_image || data.details.image_url;
+
+
+                try {
+                    const response = await fetch(url, {
+                        method: method,
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data),
+                    });
+
+
+                    const result = await response.json();
+
+
+                    if (response.ok) {
+                        showStatus(result.message || `Property ${isEditMode ? 'updated' : 'added'} successfully!`, 'success');
+                        fetchProperties(); // Refresh list
+                        resetForm(); // Hide and clear form
+                    } else {
+                        throw new Error(result.error || `Failed to ${isEditMode ? 'update' : 'add'} property`);
+                    }
+                } catch (error) {
+                    console.error('Form submission error:', error);
+                    showStatus(`Error: ${error.message}`, 'error');
+                } finally {
+                     submitBtn.disabled = false; // Re-enable button
+                }
+            });
+
+
+            // --- Initial Load ---
+            fetchProperties();
+
+
+        });
+    </script>
+</body>
+</html>
